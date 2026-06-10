@@ -1,10 +1,26 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
 name = "agri-price"
 version = "0.1.0"
+description = "Core predictive engine and data processing for agricultural price forecasting"
+dependencies = [
+    "catboost",
+    "pandas",
+    "shap",
+    "numpy",
+    "requests",
+    "reverse-geocoder",
+    "scikit-learn",
+    "transformers",
+    "torch",
+    "tqdm",
+    "openpyxl",
+    "python-dotenv",
+    "acled",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]

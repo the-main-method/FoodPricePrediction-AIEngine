@@ -34,10 +34,10 @@ async def predict_price(req: PredictionRequest):
             df_context = pd.read_sql_query("SELECT * FROM current_market_state WHERE id=1", conn)
             conn.close()
         except Exception as db_err:
-            raise HTTPException(status_code=500, detail=f"Database Error: Ensure setup_local_db.py was run. Details: {str(db_err)}")
+            raise HTTPException(status_code=500, detail=f"Database Error: Ensure setup_db.py was run. Details: {str(db_err)}")
         
         if df_context.empty:
-            raise HTTPException(status_code=500, detail="Feature store is empty. Please run setup_local_db.py.")
+            raise HTTPException(status_code=500, detail="Feature store is empty. Please run setup_db.py.")
 
         # Step B: Gather the inputs we DO have
         raw_inputs = {

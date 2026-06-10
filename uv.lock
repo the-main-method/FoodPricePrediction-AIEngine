@@ -34,6 +34,38 @@ wheels = [
 name = "agri-price"
 version = "0.1.0"
 source = { editable = "agri_price" }
+dependencies = [
+    { name = "acled" },
+    { name = "catboost" },
+    { name = "numpy" },
+    { name = "openpyxl" },
+    { name = "pandas" },
+    { name = "python-dotenv" },
+    { name = "requests" },
+    { name = "reverse-geocoder" },
+    { name = "scikit-learn" },
+    { name = "shap" },
+    { name = "torch" },
+    { name = "tqdm" },
+    { name = "transformers" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "acled" },
+    { name = "catboost" },
+    { name = "numpy" },
+    { name = "openpyxl" },
+    { name = "pandas" },
+    { name = "python-dotenv" },
+    { name = "requests" },
+    { name = "reverse-geocoder" },
+    { name = "scikit-learn" },
+    { name = "shap" },
+    { name = "torch" },
+    { name = "tqdm" },
+    { name = "transformers" },
+]
 
 [[package]]
 name = "altair"
