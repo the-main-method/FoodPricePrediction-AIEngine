@@ -20,7 +20,3 @@ catboost_info/
 *.pyo
 *.pyd
 .ipynb_checkpoints/
-
-# Old files
-demo/
-pre/
