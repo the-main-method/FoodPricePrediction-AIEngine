@@ -15,7 +15,7 @@ def load_and_train_model():
 
 @st.cache_data
 def load_data():
-    return agri_price.data.load_data("data/ml_ready_global_data.csv")
+    return agri_price.data.load_data("data/feature_store.db", table_name="historical_data")
 
 model, explainer = load_and_train_model()
 X, y, cat_features = load_data()

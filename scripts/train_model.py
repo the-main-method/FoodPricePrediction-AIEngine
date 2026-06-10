@@ -8,8 +8,8 @@ from agri_price.data import load_data
 def main():
     repo_root = Path(__file__).resolve().parents[1]
     
-    data_path = repo_root / 'data' / 'ml_ready_global_data.csv'
-    X, y, cat_features = load_data(str(data_path))
+    db_path = repo_root / 'data' / 'feature_store.db'
+    X, y, cat_features = load_data(str(db_path), table_name="historical_data")
     
     cat_features = [col for col in cat_features if col in X.columns]
     
