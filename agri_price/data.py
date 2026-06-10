@@ -55,59 +55,31 @@ def load_from_db(db_path: str, table_name: str) -> pd.DataFrame:
     return df
 
 def build_combined_dataset(
+    db_path: str,
     news_path: str,
-    insecurity_path: str,
-    weather_path: str,
-    food_path: str,
-    diesel_path: str,
-    crude_oil_path: str,
-    exchange_rate_path: str,
-    inflation_path: str
+    food_path: str
 ) -> pd.DataFrame:
     """
-    Combines all the processed datasets into a single weekly dataset.
-    All paths should point to the relevant raw Excel or CSV files.
+    Combines pre-processed database tables and specific file-based raw data
+    into a single weekly dataset.
     """
+    conn = sqlite3.connect(db_path)
     
-    # 1. News Sentiment
+    # 1. News Sentiment (Remains File-based)
     print("Processing News...")
     df_news_raw = pd.read_excel(news_path)
-    # Filter valid IDs as per preprocessing.py
     df_news_raw = df_news_raw[pd.to_numeric(df_news_raw['id'], errors='coerce').notna()].reset_index(drop=True)
     df_news = news.process_news_dataframe(df_news_raw)
 
-    # 2. Insecurity (ACLED)
-    print("Processing Insecurity...")
-    df_ins_raw = pd.read_excel(insecurity_path, sheet_name='Data')
-    df_ins_raw = df_ins_raw[['Admin1', 'Month', 'Year', 'Events', 'Fatalities']]
-    df_ins_raw['Month'] = df_ins_raw['Month'].apply(utils.month_to_num)
-    df_ins_monthly = df_ins_raw.groupby(['Admin1', 'Year', 'Month'])[['Events', 'Fatalities']].sum().reset_index()
-    df_ins_monthly.rename(columns={'Admin1': 'State'}, inplace=True)
-    
-    # State-level monthly to weekly
-    ins_dfs = []
-    for state in df_ins_monthly['State'].unique():
-        state_df = df_ins_monthly[df_ins_monthly['State'] == state].drop(columns=['State'])
-        weekly = utils.monthly_to_weekly(state_df, value_columns=['Events', 'Fatalities'], mode='sum')
-        weekly['State'] = state
-        ins_dfs.append(weekly)
-    df_insecurity = pd.concat(ins_dfs, ignore_index=True)
-    df_insecurity.rename(columns={'Events': 'Regional_Events_Count', 'Fatalities': 'Regional_Fatalities_Count'}, inplace=True)
+    # 2. Insecurity (Load from DB)
+    print("Loading Insecurity...")
+    df_insecurity = pd.read_sql_query("SELECT * FROM weekly_insecurity", conn)
 
-    # 3. Weather
-    print("Processing Weather...")
-    # Assumes weather is already a combined CSV as fetched in preprocessing.py
-    df_weather_raw = pd.read_csv(weather_path)
-    df_weather_raw['Date'] = pd.to_datetime(df_weather_raw['Date_Raw'], format='%Y%m%d')
-    df_weather_raw['Year'] = df_weather_raw['Date'].dt.year
-    df_weather_raw['Week'] = df_weather_raw['Date'].dt.strftime('%W').astype(int)
-    df_weather = df_weather_raw.groupby(['State', 'Year', 'Week']).agg(
-        Precipitation_mm=('Precipitation_mm', 'sum'),
-        Avg_Temperature_C=('Avg_Temperature_C', 'mean'),
-        Solar_Radiation_MJ=('Solar_Radiation_MJ', 'mean'),
-    ).reset_index()
+    # 3. Weather (Load from DB)
+    print("Loading Weather...")
+    df_weather = pd.read_sql_query("SELECT * FROM weekly_weather", conn)
 
-    # 4. Food Prices
+    # 4. Food Prices (Remains File-based as requested)
     print("Processing Food Prices...")
     df_food_raw = pd.read_excel(food_path, sheet_name='Sheet1')
     df_food_raw.sort_values(by='date', inplace=True)
@@ -122,51 +94,23 @@ def build_combined_dataset(
         .rename(columns={'year': 'Year', 'week': 'Week', 'location': 'State', 'food_item': 'Food_Item'})
     )
 
-    # 5. Diesel
-    print("Processing Diesel...")
-    df_diesel_raw = pd.read_excel(diesel_path, sheet_name='Automotive Gas Oil (Diesel) Pri', header=6)
-    df_diesel_raw = df_diesel_raw[df_diesel_raw['State'] != 'Nigeria'].drop(columns=['Units'])
-    df_diesel_melted = df_diesel_raw.melt(id_vars=['State'], var_name='Date', value_name='Diesel_Price_NGN')
-    df_diesel_melted['Date'] = pd.to_datetime(df_diesel_melted['Date'], format='%b %Y')
-    df_diesel_melted['Year'] = df_diesel_melted['Date'].dt.year
-    df_diesel_melted['Month'] = df_diesel_melted['Date'].dt.month
-    df_diesel_monthly = df_diesel_melted.drop(columns=['Date']).dropna(subset=['Diesel_Price_NGN'])
-    
-    diesel_dfs = []
-    for state in df_diesel_monthly['State'].unique():
-        state_df = df_diesel_monthly[df_diesel_monthly['State'] == state].drop(columns=['State'])
-        weekly = utils.monthly_to_weekly(state_df, value_columns=['Diesel_Price_NGN'], mode='mean')
-        weekly['State'] = state
-        diesel_dfs.append(weekly)
-    df_diesel = pd.concat(diesel_dfs, ignore_index=True)
+    # 5. Diesel (Load from DB)
+    print("Loading Diesel...")
+    df_diesel = pd.read_sql_query("SELECT * FROM weekly_diesel", conn)
 
-    # 6. Crude Oil
-    print("Processing Crude Oil...")
-    df_crude_raw = pd.read_excel(crude_oil_path)
-    df_crude_raw.columns = ['Date', 'Crude_Oil_Price_USD']
-    df_crude_raw['Date'] = pd.to_datetime(df_crude_raw['Date'], dayfirst=True)
-    df_crude_raw['Year'] = df_crude_raw['Date'].dt.year
-    df_crude_raw['Week'] = df_crude_raw['Date'].dt.strftime('%W').astype(int)
-    df_crude = df_crude_raw.groupby(['Year', 'Week'])['Crude_Oil_Price_USD'].mean().reset_index()
+    # 6. Crude Oil (Load from DB)
+    print("Loading Crude Oil...")
+    df_crude = pd.read_sql_query("SELECT * FROM weekly_crude_oil", conn)
 
-    # 7. Exchange Rate
-    print("Processing Exchange Rates...")
-    df_ex_raw = pd.read_excel(exchange_rate_path)
-    df_ex_raw['Date'] = pd.to_datetime(df_ex_raw['ratedate'], format='%B-%d-%Y')
-    df_ex_raw['Year'] = df_ex_raw['Date'].dt.year
-    df_ex_raw['Week'] = df_ex_raw['Date'].dt.strftime('%W').astype(int)
-    df_exchange = df_ex_raw.groupby(['Year', 'Week']).agg(Exchange_Rate_NGN_USD=('weightedAvgRate', 'mean')).reset_index()
+    # 7. Exchange Rate (Load from DB)
+    print("Loading Exchange Rates...")
+    df_exchange = pd.read_sql_query("SELECT * FROM weekly_exchange_rate", conn)
 
-    # 8. Inflation
-    print("Processing Inflation...")
-    df_inf_raw = pd.read_excel(inflation_path)
-    df_inf_monthly = df_inf_raw.rename(columns={
-        'tyear': 'Year',
-        'tmonth': 'Month',
-        'foodYearOn': 'Food_Inflation_Rate_Percent',
-        'allItemsLessFrmProdYearOn': 'General_Inflation_Rate_Percent',
-    })[['Year', 'Month', 'Food_Inflation_Rate_Percent', 'General_Inflation_Rate_Percent']]
-    df_inflation = utils.monthly_to_weekly(df_inf_monthly, mode='mean')
+    # 8. Inflation (Load from DB)
+    print("Loading Inflation...")
+    df_inflation = pd.read_sql_query("SELECT * FROM weekly_inflation", conn)
+
+    conn.close()
 
     # Final Merge
     print("Merging all sources...")
