@@ -5,34 +5,39 @@ An AI-powered predictive engine designed to forecast national agricultural commo
 It integrates granular macroeconomic data from the **World Bank Data360 API**, real-time weather from Open Meteo, and conflict data from ACLED to provide a comprehensive view of market drivers.
 
 ## Project Structure
-- `agri_price/`: Core Python package containing model prediction logic, data loading, and feature engineering.
-- `api/`: FastAPI backend for serving model predictions via REST.
-- `dashboard/`: Streamlit interactive dashboard for "what-if" scenario simulation.
-- `data/`: Directory for datasets and the local SQLite feature store.
-- `models/`: Storage for trained CatBoost model files (`.cbm`).
-- `scripts/`: Utility scripts for database setup and model training.
+- `agri_price/`: Modular library for core logic, data handling, and API fetchers.
+- `api/`: FastAPI backend for model serving.
+- `dashboard/`: Streamlit dashboard for interactive simulations.
+- `data/`: Datasets, raw files, and the SQLite feature store.
+- `models/`: Trained model binaries (`.cbm`).
+- `scripts/`: Numbered pipeline stages for the full data lifecycle.
+
+## Data Pipeline Workflow
+
+The engine operates in distinct stages. See [PIPELINE.md](PIPELINE.md) for detailed instructions.
+
+1. **Collection**: `scripts/01_collection/build_dataset.py` (API + Local Excel merge)
+2. **Database**: `scripts/02_database/setup_db.py` (Initialize Feature Store)
+3. **Maintenance**: `scripts/03_maintenance/update_live_features.py` (Nightly API updates)
+4. **Training**: `scripts/04_training/train_model.py` (Model persistence)
+5. **Validation**: `scripts/05_validation/test_api.py` (API check)
 
 ## Quick Start
 
 ### 1. Environment Setup
-We recommend using [uv](https://github.com/astral-sh/uv) for fast dependency management.
-
 ```bash
-# Install dependencies
 uv sync
 ```
 
-### 2. Initialize the Feature Store
-The API requires a local SQLite database to provide market context.
+### 2. Initialize and Run
 ```bash
-python scripts/setup_db.py
+# Set up the database
+uv run scripts/02_database/setup_db.py
+
+# Launch services (in separate terminals)
+uvicorn api.app:app --reload
+streamlit run dashboard/app.py
 ```
-
-### 3. Launch the Services
-You can run the API and the Dashboard independently:
-
-- **Launch API:** `uvicorn api.app:app --reload` (See [api/README.md](api/README.md))
-- **Launch Dashboard:** `streamlit run dashboard/app.py` (See [dashboard/README.md](dashboard/README.md))
 
 ## Documentation
 - [API Documentation](api/README.md)
