@@ -65,19 +65,21 @@ def main(state: str = DEFAULT_STATE):
     
     if yesterday_data is None:
         logging.warning("Feature store is empty. Forcing update with available data.")
-        yesterday_data = (1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, current_month, "Unknown")
+        # Adjusted for new schema: id, Gen_Inf, Food_Inf, Price_1M, Price_3M, Price_6M, Price_1Y, Temp, Precip, Solar, Month, Season
+        yesterday_data = (1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, current_month, "Unknown")
 
     # 4. Construct the Final Update Payload
     updated_values = (
         1,
         macro['General_Inflation_Rate_Percent'] if macro else yesterday_data[1],
-        market['Price_Change_1M_Percent'] if market else yesterday_data[2],
-        market['Price_Change_3M_Percent'] if market else yesterday_data[3],
-        market['Price_Change_6M_Percent'] if market else yesterday_data[4],
-        market['Price_Change_1Y_Percent'] if market else yesterday_data[5],
-        weather['Avg_Temperature_C'] if weather else yesterday_data[6],
-        weather['Precipitation_mm'] if weather else yesterday_data[7],
-        weather['Solar_Radiation_MJ'] if weather else yesterday_data[8],
+        macro['Food_Inflation_Rate_Percent'] if macro else yesterday_data[2],
+        market['Price_Change_1M_Percent'] if market else yesterday_data[3],
+        market['Price_Change_3M_Percent'] if market else yesterday_data[4],
+        market['Price_Change_6M_Percent'] if market else yesterday_data[5],
+        market['Price_Change_1Y_Percent'] if market else yesterday_data[6],
+        weather['Avg_Temperature_C'] if weather else yesterday_data[7],
+        weather['Precipitation_mm'] if weather else yesterday_data[8],
+        weather['Solar_Radiation_MJ'] if weather else yesterday_data[9],
         current_month,
         current_season
     )
@@ -85,8 +87,8 @@ def main(state: str = DEFAULT_STATE):
     # 5. Push to Database
     cursor.execute('''
         INSERT OR REPLACE INTO current_market_state 
-        (id, General_Inflation_Rate_Percent, Price_Change_1M_Percent, Price_Change_3M_Percent, Price_Change_6M_Percent, Price_Change_1Y_Percent, Avg_Temperature_C, Precipitation_mm, Solar_Radiation_MJ, Month_Num, Season)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, General_Inflation_Rate_Percent, Food_Inflation_Rate_Percent, Price_Change_1M_Percent, Price_Change_3M_Percent, Price_Change_6M_Percent, Price_Change_1Y_Percent, Avg_Temperature_C, Precipitation_mm, Solar_Radiation_MJ, Month_Num, Season)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', updated_values)
 
     conn.commit()
