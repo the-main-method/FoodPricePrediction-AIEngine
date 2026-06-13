@@ -2,11 +2,19 @@ from catboost import CatBoostRegressor
 import shap
 import pandas as pd
 from typing import Any
+from pathlib import Path
+from agri_price.core.utils import get_latest_file
 
 
-def load_model(path: str) -> tuple[CatBoostRegressor, shap.TreeExplainer]:
-    print("Loading CatBoost Model...")
-    model = CatBoostRegressor().load_model(path)
+def load_model(path_str: str) -> tuple[CatBoostRegressor, shap.TreeExplainer]:
+    p = Path(path_str)
+    if "*" in p.name:
+        actual_path = get_latest_file(p.name, p.parent)
+    else:
+        actual_path = p
+        
+    print(f"Loading CatBoost Model from {actual_path}...")
+    model = CatBoostRegressor().load_model(str(actual_path))
     explainer = shap.TreeExplainer(model)
     print("Model loaded and ready!")
     

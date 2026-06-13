@@ -3,6 +3,7 @@ from pathlib import Path
 from datetime import datetime
 
 from agri_price.data.db_manager import load_data
+from agri_price.core.utils import get_versioned_path
 
 
 def main():
@@ -16,11 +17,10 @@ def main():
     model = CatBoostRegressor(iterations=138, depth=5, learning_rate=0.1, verbose=0)
     model.fit(X, y, cat_features=cat_features)
     
-    now = datetime.now().strftime("%y%m%d")
-    
-    model_path = repo_root / 'models' / f'agri_price_model_{now}.cbm'
+    model_path = get_versioned_path("agri_price_model", "cbm", repo_root / "models")
     model_path.parent.mkdir(parents=True, exist_ok=True)
     model.save_model(str(model_path))
+    print(f"Model saved to {model_path}")
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ import agri_price.core.predictor
 # 1. INITIALIZE SERVER & LOAD AI INTO RAM
 # ==========================================
 app = FastAPI(title="AgriPrice Prediction API", version="1.0")
-model, explainer = agri_price.core.predictor.load_model("models/agri_price_model.cbm")
+model, explainer = agri_price.core.predictor.load_model("models/agri_price_model*.cbm")
 
 # ==========================================
 # 2. DEFINE THE FRONTEND PAYLOAD

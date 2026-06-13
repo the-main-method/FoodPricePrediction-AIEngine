@@ -1,12 +1,21 @@
 import sqlite3
 import pandas as pd
 import os
+from pathlib import Path
+from agri_price.core.utils import get_latest_file
 
 def setup_db():
-    db_path = 'data/feature_store.db'
-    csv_path = 'data/ml_ready_global_data.csv'
+    repo_root = Path(__file__).resolve().parents[1]
+    db_path = repo_root / 'data' / 'feature_store.db'
     
-    conn = sqlite3.connect(db_path)
+    try:
+        csv_path = get_latest_file("ml_ready_global_data*.csv", repo_root / 'data')
+        print(f"Found latest dataset: {csv_path}")
+    except FileNotFoundError:
+        print("Error: No ml_ready_global_data CSV found. Cannot initialize Feature Store.")
+        return
+    
+    conn = sqlite3.connect(str(db_path))
     cursor = conn.cursor()
     
     # 1. Create/Update the current_market_state table

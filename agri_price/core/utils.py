@@ -2,12 +2,35 @@ import calendar
 import pandas as pd
 import reverse_geocoder as rg
 from pathlib import Path
+from datetime import datetime
 
 def path(path_str: str) -> Path:
     """Helper to ensure parent directory exists for a path."""
     _path = Path(path_str)
     _path.parent.mkdir(parents=True, exist_ok=True)
     return _path
+
+def get_latest_file(pattern: str, base_path: Path) -> Path:
+    """
+    Finds the latest version of a file matching a pattern in a directory.
+    Assumes versioning follows a timestamp pattern like _yymmdd or just alphanumeric sort.
+    """
+    files = list(base_path.glob(pattern))
+    if not files:
+        # Fallback to the exact pattern if no versioned files exist
+        exact_file = base_path / pattern.replace("*", "")
+        if exact_file.exists():
+            return exact_file
+        raise FileNotFoundError(f"No files matching {pattern} found in {base_path}")
+    
+    # Sort by name (which includes the timestamp)
+    files.sort()
+    return files[-1]
+
+def get_versioned_path(base_name: str, extension: str, base_path: Path) -> Path:
+    """Generates a versioned path with the current date."""
+    now = datetime.now().strftime("%y%m%d")
+    return base_path / f"{base_name}_{now}.{extension}"
 
 def parse_coords(coord_string: str) -> tuple[float, float]:
     """Parses a 'lat,lon' string into a tuple of floats."""

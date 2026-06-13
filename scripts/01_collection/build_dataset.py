@@ -1,6 +1,7 @@
 import pandas as pd
 from pathlib import Path
 from agri_price.data.db_manager import build_combined_dataset, save_to_db
+from agri_price.core.utils import coords_to_region, get_versioned_path
 import os
 import sys
 import argparse
@@ -15,13 +16,18 @@ def main():
                         help="Base directory for Food Prices and News files (default: data/raw)")
     parser.add_argument("--db-path", type=str, default=str(repo_root / "data" / "feature_store.db"),
                         help="Path to the SQLite database (default: data/feature_store.db)")
-    parser.add_argument("--output-csv", type=str, default=str(repo_root / "data" / "ml_ready_global_data.csv"),
-                        help="Path to save the final CSV (default: data/ml_ready_global_data.csv)")
+    parser.add_argument("--output-csv", type=str, default=None,
+                        help="Path to save the final CSV (default: versioned name in data/)")
     parser.add_argument("--skip-ingestion", action="store_true", help="Skip API data ingestion")
     
     args = parser.parse_args()
     base_dir = Path(args.base_dir)
     db_path = Path(args.db_path)
+    
+    if args.output_csv:
+        output_csv = Path(args.output_csv)
+    else:
+        output_csv = get_versioned_path("ml_ready_global_data", "csv", repo_root / "data")
     
     if not args.skip_ingestion:
         print("Extracting relevant states from food price data...")
@@ -33,7 +39,6 @@ def main():
         try:
             # Read only the location column to identify unique states
             df_food_states = pd.read_excel(food_path, sheet_name='Sheet1', usecols=['location'])
-            from agri_price.core.utils import coords_to_region
             unique_states = coords_to_region(df_food_states['location']).unique().tolist()
             print(f"Detected {len(unique_states)} unique states: {', '.join(unique_states)}")
         except Exception as e:
@@ -74,7 +79,6 @@ def main():
     print(f"Final dataset has {len(df)} rows (dropped {initial_len - len(df)} rows with missing targets).")
     
     # Save results
-    output_csv = Path(args.output_csv)
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_csv, index=False)
     print(f"Saved combined dataset to {output_csv}")

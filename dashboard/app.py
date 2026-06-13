@@ -11,7 +11,7 @@ st.markdown("Adjust the macroeconomic parameters on the left to simulate shocks 
 
 @st.cache_resource
 def load_and_train_model():
-    return agri_price.core.predictor.load_model("models/agri_price_model.cbm")
+    return agri_price.core.predictor.load_model("models/agri_price_model*.cbm")
 
 @st.cache_data
 def load_data():
