@@ -25,10 +25,14 @@ def build_input_df(raw_inputs: dict[str, Any], model: CatBoostRegressor) -> pd.D
     cat_indices = list(getattr(model, "get_cat_feature_indices", lambda: [])())
     cat_feature_names = [expected_cols[i] for i in cat_indices if i < len(expected_cols)]
 
+    # Normalize raw_inputs keys to lowercase for robust lookup
+    normalized_inputs = {k.lower().strip(): v for k, v in raw_inputs.items()}
+
     final_input_dict: dict[str, Any] = {}
     for col in expected_cols:
-        if col in raw_inputs:
-            val = raw_inputs[col]
+        col_key = col.lower().strip()
+        if col_key in normalized_inputs:
+            val = normalized_inputs[col_key]
             if col in cat_feature_names:
                 final_input_dict[col] = str(val).lower().strip()
             else:
