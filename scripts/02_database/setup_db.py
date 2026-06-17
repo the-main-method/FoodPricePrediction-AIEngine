@@ -5,7 +5,7 @@ from pathlib import Path
 from agri_price.core.utils import get_latest_file
 
 def setup_db():
-    repo_root = Path(__file__).resolve().parents[1]
+    repo_root = Path(__file__).resolve().parents[2]
     db_path = repo_root / 'data' / 'feature_store.db'
     
     try:
@@ -19,6 +19,7 @@ def setup_db():
     cursor = conn.cursor()
     
     # 1. Create/Update the current_market_state table
+    cursor.execute('DROP TABLE IF EXISTS current_market_state')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS current_market_state (
             id INTEGER PRIMARY KEY,

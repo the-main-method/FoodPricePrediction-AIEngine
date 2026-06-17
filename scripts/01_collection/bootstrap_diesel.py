@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 
 def main():
-    repo_root = Path(__file__).resolve().parents[1]
+    repo_root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description="Bootstrap historical diesel data into the database from a CSV.")
     parser.add_argument("--input-file", type=str, required=True, help="Path to the historical Diesel CSV file")
     parser.add_argument("--db-path", type=str, default=str(repo_root / "data" / "feature_store.db"), help="Path to SQLite DB")

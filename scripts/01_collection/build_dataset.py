@@ -9,7 +9,7 @@ import argparse
 from agri_price.ingestion.orchestrator import ingest_all_to_db
 
 def main():
-    repo_root = Path(__file__).resolve().parents[1]
+    repo_root = Path(__file__).resolve().parents[2]
     
     parser = argparse.ArgumentParser(description="Orchestrate the full historical dataset build using the database-first pipeline.")
     parser.add_argument("--base-dir", type=str, default=str(repo_root / "data" / "raw"),

@@ -7,7 +7,7 @@ from agri_price.core.utils import get_versioned_path
 
 
 def main():
-    repo_root = Path(__file__).resolve().parents[1]
+    repo_root = Path(__file__).resolve().parents[2]
     
     db_path = repo_root / 'data' / 'feature_store.db'
     X, y, cat_features = load_data(str(db_path), table_name="historical_data")
