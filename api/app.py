@@ -161,7 +161,7 @@ async def predict_price(req: PredictionRequest):
             "predicted_price_change_percent": float(round(prediction, 2)),
             "xai_explanation": {
                 "base_market_trend": float(round(base_value, 2)),
-                "top_driving_features": feature_impacts[:6] # Send top 6 drivers for UI chart
+                "top_driving_features": feature_impacts[:8] # Send top 8 drivers for UI chart
             }
         }
 
@@ -248,7 +248,7 @@ async def simulate_price(req: SimulationRequest):
             "error_delta_percent": error_delta,
             "xai_explanation": {
                 "base_market_trend": float(round(base_value, 2)),
-                "top_driving_features": feature_impacts[:6] # Send top 6 drivers for UI chart
+                "top_driving_features": feature_impacts[:8] # Send top 8 drivers for UI chart
             }
         }
 
