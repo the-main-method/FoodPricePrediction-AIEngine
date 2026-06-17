@@ -1,15 +1,5 @@
 {
-  "frontend_aliases": [
-    "tomatoes",
-    "rice-imported",
-    "scotch-bonnet",
-    "yam",
-    "white-garri",
-    "brown-beans",
-    "onions",
-    "eggs"
-  ],
-  "nbs_standard_mappings": [
+  "commodity_ids": [
     "beans-brown",
     "beans-white-black-eye",
     "beef-bone-in",
@@ -40,55 +30,7 @@
     "tomato-tomato",
     "yam-tuber"
   ],
-  "full_mappings": {
-    "tomatoes": {
-      "Food_Item": "tomato",
-      "Item_Type": "tomato",
-      "Category": "1000 g",
-      "Vendor_Type": "government"
-    },
-    "rice-imported": {
-      "Food_Item": "rice",
-      "Item_Type": "imported",
-      "Category": "1000 g",
-      "Vendor_Type": "government"
-    },
-    "scotch-bonnet": {
-      "Food_Item": "tomato",
-      "Item_Type": "tomato",
-      "Category": "1000 g",
-      "Vendor_Type": "government"
-    },
-    "yam": {
-      "Food_Item": "yam",
-      "Item_Type": "tuber",
-      "Category": "1000 g",
-      "Vendor_Type": "government"
-    },
-    "white-garri": {
-      "Food_Item": "garri",
-      "Item_Type": "white",
-      "Category": "1000 g",
-      "Vendor_Type": "government"
-    },
-    "brown-beans": {
-      "Food_Item": "beans",
-      "Item_Type": "brown",
-      "Category": "1000 g",
-      "Vendor_Type": "government"
-    },
-    "onions": {
-      "Food_Item": "potato",
-      "Item_Type": "irish",
-      "Category": "1000 g",
-      "Vendor_Type": "government"
-    },
-    "eggs": {
-      "Food_Item": "eggs",
-      "Item_Type": "agric",
-      "Category": "12 pcs",
-      "Vendor_Type": "government"
-    },
+  "mappings": {
     "beans-brown": {
       "Food_Item": "beans",
       "Item_Type": "brown",
@@ -224,6 +166,12 @@
     "rice-agric": {
       "Food_Item": "rice",
       "Item_Type": "agric",
+      "Category": "1000 g",
+      "Vendor_Type": "government"
+    },
+    "rice-imported": {
+      "Food_Item": "rice",
+      "Item_Type": "imported",
       "Category": "1000 g",
       "Vendor_Type": "government"
     },
