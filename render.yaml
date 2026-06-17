@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: agriprice-prediction-api
+    runtime: docker
+    plan: standard # Or free, standard plan supports disks
+    envVars:
+      - key: PORT
+        value: 8000
+    disk:
+      name: sqlite-data
+      mountPath: /app/data
+      sizeGB: 1
