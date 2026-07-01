@@ -3,6 +3,7 @@ import pandas as pd
 import os
 from pathlib import Path
 from agri_price.core.utils import get_latest_file
+import agri_price.data.db as db
 
 def setup_db():
     repo_root = Path(__file__).resolve().parents[2]
@@ -15,12 +16,13 @@ def setup_db():
         print("Error: No ml_ready_global_data CSV found. Cannot initialize Feature Store.")
         return
     
-    conn = sqlite3.connect(str(db_path))
-    cursor = conn.cursor()
+    conn, is_pg = db.get_connection(str(db_path))
     
     # 1. Create/Update the current_market_state table
-    cursor.execute('DROP TABLE IF EXISTS current_market_state')
-    cursor.execute('''
+    cursor = db.execute_query(conn, is_pg, 'DROP TABLE IF EXISTS current_market_state')
+    cursor.close()
+    
+    sql_create = '''
         CREATE TABLE IF NOT EXISTS current_market_state (
             id INTEGER PRIMARY KEY,
             General_Inflation_Rate_Percent REAL,
@@ -35,14 +37,16 @@ def setup_db():
             Month_Num REAL,
             Season TEXT
         )
-    ''')
+    '''
+    cursor = db.execute_query(conn, is_pg, sql_create)
+    cursor.close()
     
     # 2. Port CSV to historical_data table
     if os.path.exists(csv_path):
         print(f"Porting {csv_path} to historical_data table...")
         df_historical = pd.read_csv(csv_path)
-        df_historical.to_sql('historical_data', conn, if_exists='replace', index=False)
-        print("Successfully ported CSV to SQLite.")
+        db.to_sql(df_historical, 'historical_data', str(db_path), if_exists='replace')
+        print("Successfully ported CSV to database.")
         
         # 3. Pull the most recent record to update current_market_state
         print("Updating current_market_state with the latest historical data...")
@@ -54,11 +58,12 @@ def setup_db():
         season = 'Wet' if 4 <= month_num <= 10 else 'Dry'
         
         # Mapping CSV columns to current_market_state schema
-        cursor.execute('''
+        sql_insert = '''
             INSERT OR REPLACE INTO current_market_state 
             (id, General_Inflation_Rate_Percent, Food_Inflation_Rate_Percent, Price_Change_1M_Percent, Price_Change_3M_Percent, Price_Change_6M_Percent, Price_Change_1Y_Percent, Avg_Temperature_C, Precipitation_mm, Solar_Radiation_MJ, Month_Num, Season)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
+        '''
+        cursor = db.execute_query(conn, is_pg, sql_insert, (
             1, 
             float(latest_row.get('General_Inflation_Rate_Percent', latest_row.get('General_Inflation_Rate', 32.7))),
             float(latest_row.get('Food_Inflation_Rate_Percent', 40.0)),
@@ -72,6 +77,7 @@ def setup_db():
             month_num,
             season
         ))
+        cursor.close()
     else:
         print(f"Error: {csv_path} not found. Cannot initialize Feature Store without data.")
     

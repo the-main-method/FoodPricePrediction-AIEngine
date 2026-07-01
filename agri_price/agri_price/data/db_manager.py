@@ -1,11 +1,11 @@
 import pandas as pd
 import sqlite3
 from typing import Tuple, List
+import agri_price.data.db as db
 
 def create_schema(db_path: str):
-    """Ensures all required tables exist in the SQLite database."""
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+    """Ensures all required tables exist in the database."""
+    conn, is_pg = db.get_connection(db_path)
     
     # Tables for the data groups
     tables = {
@@ -21,9 +21,10 @@ def create_schema(db_path: str):
     }
     
     for table_name, schema in tables.items():
-        cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({schema})")
+        cursor = db.execute_query(conn, is_pg, f"CREATE TABLE IF NOT EXISTS {table_name} ({schema})")
+        cursor.close()
         
-    cursor.execute('''
+    sql_create = '''
         CREATE TABLE IF NOT EXISTS current_market_state (
             id INTEGER PRIMARY KEY,
             General_Inflation_Rate_Percent REAL,
@@ -38,7 +39,9 @@ def create_schema(db_path: str):
             Month_Num REAL,
             Season TEXT
         )
-    ''')
+    '''
+    cursor = db.execute_query(conn, is_pg, sql_create)
+    cursor.close()
     
     conn.commit()
     conn.close()
@@ -46,9 +49,9 @@ def create_schema(db_path: str):
 
 def load_data(path: str, table_name: str = "historical_data") -> tuple[pd.DataFrame, pd.Series, list[str]]:
     # Load the latest dataset (from CSV or SQL)
-    if path.endswith('.db'):
-        conn = sqlite3.connect(path)
-        df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
+    if path.endswith('.db') or db.get_db_url():
+        conn, is_pg = db.get_connection(path)
+        df = db.read_sql_query(f"SELECT * FROM {table_name}", conn, is_postgres=is_pg)
         conn.close()
     else:
         df = pd.read_csv(path)
@@ -72,16 +75,13 @@ def load_data(path: str, table_name: str = "historical_data") -> tuple[pd.DataFr
     return X, y, cat_features
 
 def save_to_db(df: pd.DataFrame, db_path: str, table_name: str, if_exists: str = 'replace'):
-    """Saves a DataFrame to a SQLite database."""
-    conn = sqlite3.connect(db_path)
-    df.to_sql(table_name, conn, if_exists=if_exists, index=False)
-    conn.close()
-    print(f"Successfully saved {len(df)} rows to {table_name} in {db_path}.")
+    """Saves a DataFrame to the database."""
+    db.to_sql(df, table_name, db_path, if_exists=if_exists)
 
 def load_from_db(db_path: str, table_name: str) -> pd.DataFrame:
-    """Loads a DataFrame from a SQLite database."""
-    conn = sqlite3.connect(db_path)
-    df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
+    """Loads a DataFrame from the database."""
+    conn, is_pg = db.get_connection(db_path)
+    df = db.read_sql_query(f"SELECT * FROM {table_name}", conn, is_postgres=is_pg)
     conn.close()
     return df
 
@@ -97,7 +97,7 @@ def build_combined_dataset(
     from agri_price.core import utils
     from agri_price.ingestion.fetchers import news
     
-    conn = sqlite3.connect(db_path)
+    conn, is_pg = db.get_connection(db_path)
     
     # 1. News Sentiment (Remains File-based, but now cached)
     print("Processing News...")
@@ -107,11 +107,11 @@ def build_combined_dataset(
 
     # 2. Insecurity (Load from DB)
     print("Loading Insecurity...")
-    df_insecurity = pd.read_sql_query("SELECT * FROM weekly_insecurity", conn)
+    df_insecurity = db.read_sql_query("SELECT * FROM weekly_insecurity", conn, is_postgres=is_pg)
 
     # 3. Weather (Load from DB)
     print("Loading Weather...")
-    df_weather = pd.read_sql_query("SELECT * FROM weekly_weather", conn)
+    df_weather = db.read_sql_query("SELECT * FROM weekly_weather", conn, is_postgres=is_pg)
 
     # 4. Food Prices (Remains File-based as requested)
     print("Processing Food Prices...")
@@ -130,19 +130,19 @@ def build_combined_dataset(
 
     # 5. Diesel (Load from DB)
     print("Loading Diesel...")
-    df_diesel = pd.read_sql_query("SELECT * FROM weekly_diesel", conn)
+    df_diesel = db.read_sql_query("SELECT * FROM weekly_diesel", conn, is_postgres=is_pg)
 
     # 6. Crude Oil (Load from DB)
     print("Loading Crude Oil...")
-    df_crude = pd.read_sql_query("SELECT * FROM weekly_crude_oil", conn)
+    df_crude = db.read_sql_query("SELECT * FROM weekly_crude_oil", conn, is_postgres=is_pg)
 
     # 7. Exchange Rate (Load from DB)
     print("Loading Exchange Rates...")
-    df_exchange = pd.read_sql_query("SELECT * FROM weekly_exchange_rate", conn)
+    df_exchange = db.read_sql_query("SELECT * FROM weekly_exchange_rate", conn, is_postgres=is_pg)
 
     # 8. Inflation (Load from DB)
     print("Loading Inflation...")
-    df_inflation = pd.read_sql_query("SELECT * FROM weekly_inflation", conn)
+    df_inflation = db.read_sql_query("SELECT * FROM weekly_inflation", conn, is_postgres=is_pg)
 
     conn.close()
 
@@ -160,3 +160,4 @@ def build_combined_dataset(
     )
 
     return combined
+

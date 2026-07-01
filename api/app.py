@@ -4,12 +4,50 @@ import pandas as pd
 import sqlite3
 
 import agri_price.core.predictor
+import agri_price.data.db as db
 
 # ==========================================
 # 1. INITIALIZE SERVER & LOAD AI INTO RAM
 # ==========================================
 app = FastAPI(title="AgriPrice Prediction API", version="1.0")
 model, explainer = agri_price.core.predictor.load_model("models/agri_price_model*.cbm")
+
+@app.on_event("startup")
+async def startup_event():
+    # If using Postgres, check if tables exist and initialize/seed if needed
+    if db.get_db_url():
+        try:
+            conn, is_pg = db.get_connection()
+            # Check if table current_market_state exists
+            cursor = db.execute_query(
+                conn, 
+                is_pg, 
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'current_market_state'"
+            )
+            exists = cursor.fetchone()[0] > 0
+            cursor.close()
+            
+            if not exists or True:  # Let's check table count
+                import importlib
+                setup_db_module = importlib.import_module("scripts.02_database.setup_db")
+                setup_db = setup_db_module.setup_db
+                
+                if not exists:
+                    print("PostgreSQL tables not found. Automatically initializing database...")
+                    setup_db()
+                else:
+                    # Check if it is empty
+                    cursor = db.execute_query(conn, is_pg, "SELECT COUNT(*) FROM current_market_state")
+                    count = cursor.fetchone()[0]
+                    cursor.close()
+                    if count == 0:
+                        print("PostgreSQL tables empty. Seeding database...")
+                        setup_db()
+            conn.close()
+        except Exception as e:
+            print(f"Error checking/initializing database on startup: {e}")
+
+
 
 # ==========================================
 # 2. DEFINE THE FRONTEND PAYLOAD & PIPELINE
@@ -314,10 +352,10 @@ def run_prediction_pipeline(req: PredictionRequest, df_context: pd.DataFrame):
 async def predict_price(req: PredictionRequest):
     try:
         resolve_request_inputs(req)
-        # Step A: Pull the "State of the World" from the local Feature Store
+        # Step A: Pull the "State of the World" from the Feature Store
         try:
-            conn = sqlite3.connect('data/feature_store.db')
-            df_context = pd.read_sql_query("SELECT * FROM current_market_state WHERE id=1", conn)
+            conn, is_pg = db.get_connection('data/feature_store.db')
+            df_context = db.read_sql_query("SELECT * FROM current_market_state WHERE id=1", conn, is_postgres=is_pg)
             conn.close()
         except Exception as db_err:
             raise HTTPException(status_code=500, detail=f"Database Error: Ensure setup_db.py was run. Details: {str(db_err)}")
@@ -360,7 +398,7 @@ async def simulate_price(req: SimulationRequest):
         resolve_request_inputs(req)
         # Step A: Pull matching historical context from the feature store
         try:
-            conn = sqlite3.connect('data/feature_store.db')
+            conn, is_pg = db.get_connection('data/feature_store.db')
             
             # Try to find the exact match for item + date
             query_exact = """
@@ -373,9 +411,10 @@ async def simulate_price(req: SimulationRequest):
                   AND Month = ?
                 LIMIT 1
             """
-            df_context = pd.read_sql_query(
+            df_context = db.read_sql_query(
                 query_exact, 
                 conn, 
+                is_postgres=is_pg,
                 params=(req.Food_Item, req.Item_Type, req.Category, req.Vendor_Type, req.Year, req.Month)
             )
             
@@ -384,7 +423,7 @@ async def simulate_price(req: SimulationRequest):
             # Fallback: find any row for that year/month to get general macro & weather context
             if not exact_match_found:
                 query_fallback = "SELECT * FROM historical_data WHERE Year = ? AND Month = ? LIMIT 1"
-                df_context = pd.read_sql_query(query_fallback, conn, params=(req.Year, req.Month))
+                df_context = db.read_sql_query(query_fallback, conn, is_postgres=is_pg, params=(req.Year, req.Month))
                 
             conn.close()
         except Exception as db_err:

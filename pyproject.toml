@@ -21,6 +21,8 @@ dependencies = [
     "transformers>=5.10.2",
     "uvicorn>=0.48.0",
     "yfinance>=1.4.1",
+    "pg8000>=1.30.3",
+    "sqlalchemy>=2.0.28",
 ]
 
 [tool.uv.workspace]

@@ -1,15 +1,16 @@
 import pandas as pd
 import sqlite3
 import logging
+import agri_price.data.db as db
 
 def fetch_market_price_lags(db_path: str):
     """
     Calculates the 1M, 3M, 6M, and 1Y lags from the historical database.
     """
     try:
-        conn = sqlite3.connect(db_path)
+        conn, is_pg = db.get_connection(db_path)
         # Pull the latest record from historical_data
-        df = pd.read_sql_query("SELECT * FROM historical_data ORDER BY Year DESC, Week DESC LIMIT 1", conn)
+        df = db.read_sql_query("SELECT * FROM historical_data ORDER BY Year DESC, Week DESC LIMIT 1", conn, is_postgres=is_pg)
         conn.close()
         
         if df.empty:

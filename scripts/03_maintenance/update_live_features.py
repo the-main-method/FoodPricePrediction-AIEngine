@@ -8,6 +8,7 @@ import pandas as pd
 from agri_price.ingestion.fetchers import weather, inflation
 from agri_price.core.utils import get_season
 from agri_price.data.feature_logic import fetch_market_price_lags
+import agri_price.data.db as db
 
 # 1. Setup Logging
 logging.basicConfig(
@@ -32,13 +33,13 @@ def main(state: str = DEFAULT_STATE):
     current_month = now.month
     current_season = get_season(current_month)
 
-    # 2. Connect to the local SQLite Feature Store
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+    # 2. Connect to the local SQLite or Remote Postgres Feature Store
+    conn, is_pg = db.get_connection(db_path)
 
     # 3. Graceful Degradation Logic
-    cursor.execute("SELECT * FROM current_market_state WHERE id = 1")
+    cursor = db.execute_query(conn, is_pg, "SELECT * FROM current_market_state WHERE id = 1")
     yesterday_data = cursor.fetchone()
+    cursor.close()
     
     if yesterday_data is None:
         logging.warning("Feature store is empty. Forcing update with available data.")
@@ -62,11 +63,13 @@ def main(state: str = DEFAULT_STATE):
     )
 
     # 5. Push to Database
-    cursor.execute('''
+    sql = '''
         INSERT OR REPLACE INTO current_market_state 
         (id, General_Inflation_Rate_Percent, Food_Inflation_Rate_Percent, Price_Change_1M_Percent, Price_Change_3M_Percent, Price_Change_6M_Percent, Price_Change_1Y_Percent, Avg_Temperature_C, Precipitation_mm, Solar_Radiation_MJ, Month_Num, Season)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', updated_values)
+    '''
+    cursor = db.execute_query(conn, is_pg, sql, updated_values)
+    cursor.close()
 
     conn.commit()
     conn.close()
